@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
-import { useAuth } from "../contexts/AuthContext";
-import { useNavigate } from "react-router-dom";
+import { useAuth } from "../hooks/useAuth";
+import { useNavigate, Link } from "react-router-dom";
 import getApiClient from "../services/ApiClient";
 
 interface Contact {
@@ -32,6 +32,11 @@ interface ApiErrorResponse {
   };
 }
 
+interface ContactsApiResponse {
+  data: Contact[];
+  pagination: PaginationState;
+}
+
 const HomePage = () => {
   const { token, logout } = useAuth();
   const navigate = useNavigate();
@@ -60,7 +65,7 @@ const HomePage = () => {
       setIsLoading(true);
       try {
         const apiClient = getApiClient(token || "");
-        const response = await apiClient.get(
+        const response = await apiClient.get<ContactsApiResponse>(
           `/contacts?page=${page}&limit=${pagination.limit}`
         );
         setContacts(response.data);
@@ -99,16 +104,42 @@ const HomePage = () => {
     setUploadMessage("");
 
     try {
+      // Create a new FormData instance
       const formData = new FormData();
+      
+      // Explicitly set the field name to 'file' as expected by the backend
       formData.append("file", csvFile);
-
-      const apiClient = getApiClient(token || "");
-      await apiClient.post("/upload-csv", formData);
-
-      setUploadMessage("File uploaded successfully!");
-      setCsvFile(null);
-      // Refresh contacts after upload
-      fetchContacts();
+      
+      // Log detailed information about the file and form data
+      console.log('Uploading file:', {
+        name: csvFile.name,
+        type: csvFile.type,
+        size: csvFile.size,
+        lastModified: new Date(csvFile.lastModified).toISOString()
+      });
+      
+      // Use fetch directly for more control over the request
+      const response = await fetch('http://localhost:8080/upload-csv', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      });
+      
+      // Log the raw response for debugging
+      console.log('Response status:', response.status);
+      const responseData = await response.json();
+      console.log('Response data:', responseData);
+      
+      if (response.ok) {
+        setUploadMessage("File uploaded successfully!");
+        setCsvFile(null);
+        // Refresh contacts after upload
+        fetchContacts();
+      } else {
+        setUploadMessage(`Upload failed: ${responseData.message || 'Unknown error'}`);
+      }
     } catch (error: unknown) {
       console.error("Upload error:", error);
       const errorMessage =
@@ -139,9 +170,10 @@ const HomePage = () => {
       setCallStatus({
         isLoading: false,
         contactId: contact.id,
-        message: `Call to ${contact.name} initiated successfully! Call ID: ${response.data.callId}`,
+        message: `Call to ${contact.name} initiated successfully! Call ID: ${response}`,
         isError: false,
       });
+      navigate("/audio-bot", { state: { contactId: contact.id } });
 
       setTimeout(() => {
         setCallStatus((prev) => ({
@@ -189,12 +221,20 @@ const HomePage = () => {
       <header className="bg-white shadow">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
           <h1 className="text-2xl font-bold text-gray-800">Dashboard</h1>
-          <button
-            onClick={handleLogout}
-            className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
-          >
-            Logout
-          </button>
+          <div className="flex gap-4">
+            <Link
+              to="/audio-bot"
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              Voice Bot
+            </Link>
+            <button
+              onClick={handleLogout}
+              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
+            >
+              Logout
+            </button>
+          </div>
         </div>
       </header>
 

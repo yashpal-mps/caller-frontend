@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useAuth } from "../contexts/AuthContext";
+import { useAuth } from "../hooks/useAuth";
 import { useNavigate, Link } from "react-router-dom";
 import getApiClient from "../services/ApiClient";
 
@@ -19,7 +19,7 @@ const LoginPage = () => {
 
     try {
       const apiClient = getApiClient();
-      const response = await apiClient.post("/auth/login", { email, password });
+      const response = await apiClient.post("/auth/login", { email, password }) as { token: string };
       
       if (response.token) {
         // Adjust this line based on what your login function expects

@@ -35,12 +35,16 @@ const AudioBotPage: React.FC = () => {
   const [callDuration, setCallDuration] = useState<number>(0);
   const [timerInterval, setTimerInterval] = useState<number | null>(null);
   
-  // Connect to WebSocket when page loads, but don't initialize audio yet
+  // Connect to WebSocket once per token; avoid re-runs
   useEffect(() => {
-    // Only connect to WebSocket when component mounts
-    console.log("Connecting to WebSocket on page load");
+    // Only connect when a valid token exists
+    if (!token) {
+      console.warn("No auth token present; skipping WS connect until login");
+      return;
+    }
+    console.log("Connecting to WebSocket on page load with token");
     connect();
-    
+
     // Cleanup on unmount
     return () => {
       console.log("Disconnecting WebSocket");
@@ -49,7 +53,8 @@ const AudioBotPage: React.FC = () => {
         clearInterval(timerInterval);
       }
     };
-  }, [connect, disconnect, timerInterval]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]);
   
   // Initialize audio context (requires user interaction)
   const initAudio = () => {

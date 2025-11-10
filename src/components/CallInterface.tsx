@@ -91,7 +91,7 @@ const CallInterface: React.FC<CallInterfaceProps> = ({ token }) => {
     
     try {
       setRecordingStatus("Processing audio...");
-      const base64Audio = await recorder.stop();
+      await recorder.stop();
       setIsRecording(false);
       
       // Stop streaming audio
